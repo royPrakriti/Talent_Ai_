@@ -14,13 +14,18 @@ import time
 from datetime import datetime, timedelta
 import json
 
+
+
 # Load environment variables
 load_dotenv()
 
 # Load custom CSS
 def load_css():
-    with open('static/css/custom.css') as f:
+    # with open('static/css/custom.css') as f:
+    with open('static/css/custom.css', encoding='utf-8') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+    
 
 # Initialize agents
 @st.cache_resource
@@ -54,6 +59,17 @@ def extract_text_from_file(uploaded_file):
                 continue
         # If all encodings fail, try with error handling
         return uploaded_file.read().decode('utf-8', errors='replace')
+
+def calculate_ats_score(resume_text, job_description):
+    """Basic ATS score based on keyword matching"""
+    resume_words = set(resume_text.lower().split())
+    job_words = set(job_description.lower().split())
+    if not job_words:
+        return 0
+    matched_words = resume_words.intersection(job_words)
+    score = len(matched_words) / len(job_words) * 100
+    return round(score, 2)
+
 
 # Utility functions for UI
 def create_card(title, content, card_type="primary"):
@@ -159,6 +175,7 @@ def main():
 
     # Load custom CSS
     load_css()
+    
 
     # Initialize session state
     if "current_candidate" not in st.session_state:
@@ -182,8 +199,27 @@ def main():
 
     # Sidebar with logo and navigation
     with st.sidebar:
-        st.markdown("<h1 style='text-align: center;'>🧠 TalentAI</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #8392ab;'>Intelligent Talent Acquisition</p>", unsafe_allow_html=True)
+            # Title: 🧠 TalentAI
+        st.markdown("""
+        <h1 style='
+            text-align: center;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 2rem;
+            margin-bottom: 0;
+        '>🧠 TalentAI</h1>
+        """, unsafe_allow_html=True)
+
+        # Subtitle: Intelligent Talent Acquisition
+        st.markdown("""
+        <p style='
+            text-align: center;
+            color: #cccccc;
+            font-size: 0.95rem;
+            margin-top: 0.3rem;
+        '>Intelligent Talent Acquisition</p>
+        """, unsafe_allow_html=True)
+
         st.markdown("---")
         
         # Navigation menu
@@ -604,6 +640,17 @@ def main():
                             st.subheader("Key Points")
                             for key, value in analysis["key_points"].items():
                                 st.write(f"**{key.replace('_', ' ').title()}**: {value}")
+
+
+                            ats_score = calculate_ats_score( 
+                                resume_text,
+                                st.session_state.current_job["description"]
+                            )
+                            st.subheader("📊 ATS Score")
+                            st.progress(min(ats_score, 100) / 100.0)
+                            st.write(f"**Score:** {ats_score}% match with the job description.")
+
+
                 except Exception as e:
                     st.error(f"Error processing file: {str(e)}")
         else:
